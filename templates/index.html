@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Calculator</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon_bitcoin.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="theme-toggle-wrapper">
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+            <span class="toggle-track">
+                <span class="toggle-icon"></span>
+                <span class="toggle-text" id="toggle-text">DAYMODE</span>
+            </span>
+        </button>
+    </div>
+    
+    <div class="container">
+        <h1 id="title">BTC Calculator</h1>
+
+        <form id="calc-form">
+            <label for="currency" id="label-currency">Fiat Currency:</label>
+            <select name="currency" id="currency">
+                <option value="brl">BRL</option>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+            </select>
+
+            <label for="mode" id="label-mode">Mode:</label>
+            <select name="mode" id="mode">
+                <option value="fiat-to-btc" data-en="FIAT → BTC" data-pt="FIAT → BTC">FIAT → BTC</option>
+                <option value="btc-to-fiat" data-en="BTC → FIAT" data-pt="BTC → FIAT">BTC → FIAT</option>
+            </select>
+
+            <label for="amount" id="label-amount">Amount:</label>
+            <div style="position: relative; width: 100%;">
+                <span id="currency-symbol" style="position: absolute; left: 10px; top: 12px; pointer-events: none; font-weight: normal; color: #888; font-size: 16px;"></span>
+                <input type="text" name="amount" id="amount" required placeholder="1,000" inputmode="decimal" style="width: 100%; padding-left: 40px; box-sizing: border-box;">
+            </div>
+
+            <button type="submit" id="btn-submit">Calculate</button>
+        </form>
+
+        <!-- Exibição do preço atual (sempre visível) -->
+        <p class="info" id="current-price" style="margin-top: 20px; font-size: 16px;"></p>
+        <p class="price-update-info" id="price-update-info" style="font-size: 11px; color: #999; text-align: center; margin-top: 5px;">
+            last price update: <span id="time-ago">just now</span><br>(from <a href="https://www.coingecko.com" target="_blank" rel="noopener noreferrer" style="color: #999; text-decoration: underline;">CoinGecko</a>)
+        </p>
+        
+        <!-- Resultado do cálculo (só aparece após calcular) -->
+        <p class="result" id="calc-result" style="display: none;"></p>
+    </div>
+
+    <!-- Assinatura -->
+    <footer style="position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 12px; color: #999; z-index: 1000;">
+        made by <span style="color: #f7931a; font-weight: bold;">luisforasteiro</span>
+    </footer>
+
+    <script>
+        // Preços carregados do backend (UMA ÚNICA VEZ)
+        const bitcoinPrices = {{ prices | tojson | safe }};
+        const loadTime = Date.now();
+
+        const translations = {
+            en: {
+                title: 'BTC Calculator',
+                labelCurrency: 'Fiat Currency:',
+                labelMode: 'Conversion:',
+                labelAmount: 'Amount:',
+                btnSubmit: 'Calculate'
+            },
+            pt: {
+                title: 'BTC Calculator',
+                labelCurrency: 'Moeda Fiat:',
+                labelMode: 'Conversão:',
+                labelAmount: 'Valor:',
+                btnSubmit: 'Calcular'
+            }
+        };
+
+        const currencySymbols = {
+            'brl': 'R$',
+            'usd': '$',
+            'eur': '€'
+        };
+
+        const currencySelect = document.getElementById('currency');
+        const amountInput = document.getElementById('amount');
+        const modeSelect = document.getElementById('mode');
+        const currentPriceElement = document.getElementById('current-price');
+        const calcResultElement = document.getElementById('calc-result');
+        const calcForm = document.getElementById('calc-form');
+
+        // Função para exibir o preço atual
+        function displayCurrentPrice() {
+            const currency = currencySelect.value;
+            const symbol = currencySymbols[currency];
+            const price = bitcoinPrices[currency];
+            
+            if (price) {
+                const formattedPrice = new Intl.NumberFormat('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(price);
+                
+                currentPriceElement.textContent = `1 Bitcoin = ${symbol} ${formattedPrice}`;
+                currentPriceElement.style.color = '#f7931a';
+            } else {
+                currentPriceElement.textContent = 'Error loading price - Refresh page (F5)';
+                currentPriceElement.style.color = 'red';
+            }
+        }
+
+        // Função para formatar número com separadores
+        function formatNumberInput(value) {
+            // Remove separadores de milhar (vírgulas)
+            let cleaned = value.replace(/,/g, '');
+            
+            // Substitui ponto por ponto (já é o separador decimal padrão)
+            return cleaned;
+        }
+
+        // Função para calcular conversão
+        function calculateConversion(event) {
+            event.preventDefault();
+            
+            const currency = currencySelect.value;
+            const mode = modeSelect.value;
+            const cleanValue = formatNumberInput(amountInput.value);
+            const amount = parseFloat(cleanValue);
+            const symbol = currencySymbols[currency];
+            const btcPrice = bitcoinPrices[currency];
+            
+            if (!cleanValue || isNaN(amount) || amount <= 0) {
+                calcResultElement.textContent = 'Please enter a valid amount greater than zero';
+                calcResultElement.style.color = 'red';
+                calcResultElement.style.display = 'block';
+                return;
+            }
+            
+            if (!btcPrice) {
+                calcResultElement.textContent = 'Error: Price not available - Refresh page (F5)';
+                calcResultElement.style.color = 'red';
+                calcResultElement.style.display = 'block';
+                return;
+            }
+            
+            let resultText = '';
+            
+            if (mode === 'fiat-to-btc') {
+                const btcReceived = amount / btcPrice;
+                resultText = `You spend ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency.toUpperCase()} and receive ${btcReceived.toFixed(8)} BTC`;
+            } else {
+                const fiatReceived = amount * btcPrice;
+                resultText = `You spend ${amount.toFixed(8)} BTC and receive ${symbol} ${fiatReceived.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+            
+            calcResultElement.textContent = resultText;
+            calcResultElement.style.display = 'block';
+        }
+
+        function updateLanguage() {
+            const currency = currencySelect.value;
+            const lang = currency === 'brl' ? 'pt' : 'en';
+            
+            document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
+            document.title = translations[lang].title;
+            document.getElementById('title').textContent = translations[lang].title;
+            document.getElementById('label-currency').textContent = translations[lang].labelCurrency;
+            document.getElementById('label-mode').textContent = translations[lang].labelMode;
+            document.getElementById('label-amount').textContent = translations[lang].labelAmount;
+            document.getElementById('btn-submit').textContent = translations[lang].btnSubmit;
+        }
+
+        function updatePlaceholder() {
+            const currency = currencySelect.value;
+            const mode = modeSelect.value;
+            const symbol = currencySymbols[currency];
+            const lang = currency === 'brl' ? 'pt' : 'en';
+            const currencySymbolElement = document.getElementById('currency-symbol');
+            
+            if (mode === 'fiat-to-btc') {
+                amountInput.placeholder = `1,000`;
+                currencySymbolElement.textContent = symbol;
+                currencySymbolElement.style.display = 'block';
+            } else {
+                amountInput.placeholder = `0.001`;
+                currencySymbolElement.textContent = '₿';
+                currencySymbolElement.style.display = 'block';
+            }
+        }
+
+        function updateInterface() {
+            updateLanguage();
+            updatePlaceholder();
+            displayCurrentPrice();
+            // Limpa o campo de valor ao trocar de moeda
+            amountInput.value = '';
+            // Esconde o resultado anterior
+            calcResultElement.style.display = 'none';
+        }
+
+        // Formata o input enquanto digita com separadores de milhar
+        let lastValidValue = '';
+        amountInput.addEventListener('input', function(e) {
+            const mode = modeSelect.value;
+            let cursorPosition = e.target.selectionStart;
+            let value = e.target.value;
+            
+            // Modo especial para BTC → FIAT (formatação de satoshis)
+            if (mode === 'btc-to-fiat') {
+                // Remove tudo exceto números
+                let cleaned = value.replace(/[^\d]/g, '');
+                
+                if (cleaned.length === 0) {
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Preenche com zeros à esquerda até ter 9 dígitos (0.00000001 a 99.99999999)
+                cleaned = cleaned.padStart(9, '0');
+                
+                // Insere o ponto após o primeiro ou segundo dígito dependendo do tamanho
+                let formatted;
+                if (cleaned.length === 9) {
+                    // 0.00000001 formato
+                    formatted = '0.' + cleaned.substring(1);
+                } else if (cleaned.length === 10) {
+                    // 00.00000001 formato
+                    formatted = cleaned.substring(0, 2) + '.' + cleaned.substring(2);
+                } else {
+                    // Mais de 10 dígitos - formato normal
+                    const intPart = cleaned.substring(0, cleaned.length - 8);
+                    const decPart = cleaned.substring(cleaned.length - 8);
+                    formatted = intPart + '.' + decPart;
+                }
+                
+                // Remove zeros à esquerda desnecessários da parte inteira (exceto o último)
+                formatted = formatted.replace(/^0+(\d)/, '$1');
+                
+                // Garante pelo menos "0."
+                if (formatted.startsWith('.')) {
+                    formatted = '0' + formatted;
+                }
+                
+                // Limita a 8 casas decimais
+                const parts = formatted.split('.');
+                if (parts[1] && parts[1].length > 8) {
+                    formatted = parts[0] + '.' + parts[1].substring(0, 8);
+                }
+                
+                e.target.value = formatted;
+                
+                // Posiciona cursor no final
+                e.target.setSelectionRange(formatted.length, formatted.length);
+                
+            } else {
+                // Modo FIAT → BTC (formatação normal com separadores de milhar)
+                // Remove tudo exceto números e ponto
+                let cleaned = value.replace(/[^\d.]/g, '');
+                
+                // Garante apenas um ponto decimal
+                let parts = cleaned.split('.');
+                if (parts.length > 2) {
+                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                // Separa parte inteira e decimal
+                let integerPart = parts[0] || '';
+                let decimalPart = parts[1];
+                
+                // Adiciona separador de milhar (vírgula)
+                if (integerPart.length > 0) {
+                    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+                
+                // Reconstrói o valor formatado
+                let formatted = integerPart;
+                if (decimalPart !== undefined) {
+                    formatted += '.' + decimalPart;
+                }
+                
+                // Atualiza o valor
+                lastValidValue = formatted;
+                e.target.value = formatted;
+                
+                // Ajusta a posição do cursor
+                let oldValueBeforeCursor = value.substring(0, cursorPosition);
+                let oldCommasBeforeCursor = (oldValueBeforeCursor.match(/,/g) || []).length;
+                let newValueBeforeCursor = formatted.substring(0, cursorPosition);
+                let newCommasBeforeCursor = (newValueBeforeCursor.match(/,/g) || []).length;
+                let diff = newCommasBeforeCursor - oldCommasBeforeCursor;
+                
+                e.target.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+            }
+        });
+
+        // Event Listeners
+        currencySelect.addEventListener('change', updateInterface);
+        modeSelect.addEventListener('change', updatePlaceholder);
+        calcForm.addEventListener('submit', calculateConversion);
+        
+        // Atualiza o tempo desde a última atualização
+        function updateTimeAgo() {
+            const now = Date.now();
+            const diffMs = now - loadTime;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            
+            const timeAgoElement = document.getElementById('time-ago');
+            
+            if (diffMinutes === 0) {
+                timeAgoElement.textContent = 'just now';
+            } else if (diffMinutes === 1) {
+                timeAgoElement.textContent = '1 minute ago';
+            } else if (diffMinutes < 60) {
+                timeAgoElement.textContent = `${diffMinutes} minutes ago`;
+            } else {
+                const hours = Math.floor(diffMinutes / 60);
+                if (hours === 1) {
+                    timeAgoElement.textContent = '1 hour ago';
+                } else {
+                    timeAgoElement.textContent = `${hours} hours ago`;
+                }
+            }
+        }
+        
+        // Atualiza o tempo a cada 30 segundos
+        setInterval(updateTimeAgo, 30000);
+        updateTimeAgo();
+        
+        // Inicializa
+        updateInterface();
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const toggleText = document.getElementById('toggle-text');
+        const body = document.body;
+
+        // Carrega o tema salvo ou usa o padrão (claro)
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        body.classList.add(savedTheme + '-mode');
+        
+        // Atualiza o texto do toggle
+        if (savedTheme === 'dark') {
+            toggleText.textContent = 'NIGHTMODE';
+        } else {
+            toggleText.textContent = 'DAYMODE';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                toggleText.textContent = 'NIGHTMODE';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                toggleText.textContent = 'DAYMODE';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+/* Modo Claro (padrão) */
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease, color 0.3s ease;
+    position: relative;
+}
+
+/* Imagem de fundo com overlay opaco */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: -1;
+    transition: opacity 0.3s ease, background-image 0.3s ease;
+}
+
+body.light-mode {
+    background: #f4f4f4;
+    color: #333;
+}
+
+/* Ajuste de opacidade e imagem para modo claro */
+body.light-mode::before {
+    background-image: url('bitcoin_sunlight_2.jpg'); /* Imagem para modo claro */
+    background-position: right center; /* Posiciona à direita para mostrar o sol */
+    opacity: 0.9; /* Mais visível no modo claro */
+}
+
+body.light-mode .container {
+    background: white;
+    color: #333;
+}
+
+body.light-mode input,
+body.light-mode select {
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+/* Modo Escuro */
+body.dark-mode {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+/* Ajuste de opacidade e imagem para modo escuro */
+body.dark-mode::before {
+    background-image: url('bitcoin_night_2.jpg'); /* Imagem para modo escuro */
+    opacity: 0.5; /* Mais visível no modo escuro */
+}
+
+body.dark-mode .container {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+body.dark-mode input,
+body.dark-mode select {
+    background: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+}
+
+body.dark-mode #currency-symbol {
+    color: #999 !important;
+}
+
+body.dark-mode .theme-toggle {
+    background: #3a3a3a;
+    border: 2px solid #555;
+}
+
+body.dark-mode .theme-toggle:hover {
+    background: #4a4a4a;
+}
+
+/* Botão de alternância de tema - Estilo Switch */
+.theme-toggle-wrapper {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.theme-toggle {
+    width: 150px;
+    height: 50px;
+    border-radius: 25px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+body.light-mode .theme-toggle {
+    background: white;
+}
+
+body.dark-mode .theme-toggle {
+    background: black;
+}
+
+.toggle-track {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.toggle-icon {
+    position: absolute;
+    font-size: 18px;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+body.light-mode .toggle-icon {
+    left: 6px;
+    background: black;
+}
+
+body.dark-mode .toggle-icon {
+    left: calc(100% - 38px);
+    background: white;
+}
+
+body.dark-mode .toggle-icon::before {
+    content: "🌓";
+}
+
+body.light-mode .toggle-icon::before {
+    content: "🌓";
+}
+
+.toggle-text {
+    font-weight: bold;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    position: absolute;
+    transition: all 0.4s ease;
+    white-space: nowrap;
+}
+
+body.light-mode .toggle-text {
+    right: 12px;
+    color: #333;
+}
+
+body.dark-mode .toggle-text {
+    left: 12px;
+    color: #e0e0e0;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+body.light-mode .moon-icon {
+    display: none;
+}
+
+body.dark-mode .sun-icon {
+    display: none;
+}
+
+.container {
+    max-width: 500px;
+    width: 90%;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+h1 {
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin: 10px 0 5px;
+}
+
+select, input {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+#currency-symbol {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1;
+}
+
+button[type="submit"] {
+    padding: 12px;
+    background: #f7931a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background: #f7931a;
+}
+
+.result, .info {
+    margin-top: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+body.light-mode .result {
+    color: #333 !important;
+}
+
+body.dark-mode .result {
+    color: #ffffff !important;
+}
+
+body.light-mode .info {
+    color: #f7931a;
+}
+
+body.dark-mode .info {
+    color: #f7f7f7;
+}
+
+.error {
+    color: red;
+    text-align: center;
+}
