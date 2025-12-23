@@ -132,6 +132,7 @@
             const amount = parseFloat(cleanValue);
             const symbol = currencySymbols[currency];
             const btcPrice = bitcoinPrices[currency];
+            const ONE_TRILLION = 1000000000000;
             
             if (!cleanValue || isNaN(amount) || amount <= 0) {
                 calcResultElement.textContent = 'Please enter a valid amount greater than zero';
@@ -150,11 +151,21 @@
             let resultText = '';
             
             if (mode === 'fiat-to-btc') {
-                const btcReceived = amount / btcPrice;
-                resultText = `You spend ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency.toUpperCase()} and receive ${btcReceived.toFixed(8)} BTC`;
+                // Verifica se o valor em fiat passa de 1 trilhão
+                if (amount >= ONE_TRILLION) {
+                    resultText = `You spend ♾️ ${currency.toUpperCase()} and receive ♾️ BTC`;
+                } else {
+                    const btcReceived = amount / btcPrice;
+                    resultText = `You spend ${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency.toUpperCase()} and receive ${btcReceived.toFixed(8)} BTC`;
+                }
             } else {
                 const fiatReceived = amount * btcPrice;
-                resultText = `You spend ${amount.toFixed(8)} BTC and receive ${symbol} ${fiatReceived.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                // Verifica se o valor convertido em fiat passa de 1 trilhão
+                if (fiatReceived >= ONE_TRILLION) {
+                    resultText = `You spend ♾️ BTC and receive ♾️ ${currency.toUpperCase()}`;
+                } else {
+                    resultText = `You spend ${amount.toFixed(8)} BTC and receive ${symbol} ${fiatReceived.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
             }
             
             calcResultElement.textContent = resultText;

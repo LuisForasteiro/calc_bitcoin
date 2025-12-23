@@ -3,7 +3,7 @@ import requests
 import redis
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente do arquivo .env
